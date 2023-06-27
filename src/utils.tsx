@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { fontScale } = Dimensions.get("window");
 // const BASE_URL = 'http://192.168.1.22:8000/api/v1/';
-const BASE_URL = 'https://0034-122-176-50-200.ngrok-free.app/api/v1/';
+const BASE_URL = 'https://e231-122-176-50-200.ngrok-free.app/api/v1/';
 
 export const { windowWidth } = Dimensions.get("window").width;
 export const { windowHeight } = Dimensions.get("window").height;

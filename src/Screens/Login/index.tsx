@@ -144,7 +144,7 @@ function Login({ navigation }) {
                   ref={passwordRef}>
                 </TextInput>
                 <TouchableOpacity hitSlop={5} style={{ position: 'absolute', top: '35%', right: '5%' }} activeOpacity={1} onPress={() => setShowPassword(!showPassword)}>
-                  <Image source={require('../../images/eye-icon.png')}></Image>
+                  {showPassword ? <Image source={require('../../images/eye-slash.png')}></Image> : <Image source={require('../../images/eye-icon.png')}></Image>}
                 </TouchableOpacity>
               </View>
             </View>

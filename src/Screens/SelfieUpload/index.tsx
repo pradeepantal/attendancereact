@@ -109,7 +109,7 @@ function SelfieUpload(props) {
                                 style={{ borderRadius: 200, width: scale(250), height: scale(250), borderWidth: 5, borderColor: '#29B612' }}
                             /> :
                             <Image
-                                source={require('./../../images/dummy-face-img.png')}
+                                source={require('./../../images/dummy-profile-placeholder.jpg')}
                                 style={{ borderRadius: 200, width: scale(250), height: scale(250), borderWidth: 5, borderColor: '#29B612' }}
                             />
                     }
@@ -119,8 +119,7 @@ function SelfieUpload(props) {
                         Verify to clock in
                     </Text>
                     <Text style={[styles.textStyle, { fontSize: moderateScale(16), fontWeight: 400, color: '#8F9BB3', textAlign: 'center', marginTop: '3%' }]}>
-                        Make sure your head is in the circle
-                        while we scan your face
+                        Tap for selfie
                     </Text>
                 </View>
             </View>

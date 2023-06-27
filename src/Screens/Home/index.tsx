@@ -9,7 +9,7 @@ import Geolocation from '@react-native-community/geolocation';
 import { Stopwatch } from 'react-native-stopwatch-timer';
 import moment from 'moment';
 
-import { getFontSize, getData, apiCall } from '../../utils';
+import { getFontSize, getData, apiCall, storeData } from '../../utils';
 import { mainColors } from '../../colors';
 
 function Home(props) {
@@ -24,6 +24,7 @@ function Home(props) {
     const [showLoader, setShowLoader] = useState(false);
     const [loginUserName, setLoginUserName] = useState('');
     const [punchedIn, setPunchedIn] = useState(false);
+    const [stopWatchStartTime, setStopWatchStartTime] = useState(0);
 
     const stopWatchStyles = {
         container: {
@@ -84,13 +85,41 @@ function Home(props) {
     React.useEffect(() => {
         const unsubscribe = props.navigation.addListener('focus', () => {
             setPunchType('');
+            getData('timeElapsed').then((res) => {
+                if (res == 0 || res == null) {
+                    getData('punchInTime').then((res) => {
+                        if (res == 0 || res == null) {
+                            setStopWatchStartTime(0);
+                        }
+                        else {
+                            var difference = Date.now() - res;
+                            var milliSecondsDifference = Math.floor(difference);
+                            setPunchedIn(true);
+                            setProgressValue(1);
+                            setStopWatchStartTime(milliSecondsDifference);
+                            setIsStopwatchStart(true);
+                        }
+                    });
+                }
+                else {
+                    setPunchedIn(true);
+                    setProgressValue(1);
+                    setStopWatchStartTime(res);
+                    setIsStopwatchStart(true);
+                    storeData('timeElapsed', 0);
+                    storeData('punchInTime', Date.now());
+                }
+            });
+
             const selfieUploaded = props?.route?.params?.selfieUploaded;
+
             if (selfieUploaded) {
                 Alert.alert('User Punched in successfully');
                 setIsStopwatchStart(true);
-                setProgressValue(0.67);
+                setProgressValue(1);
                 setPunchedIn(true);
                 setPunchType('');
+                storeData('punchInTime', Date.now());
             }
         });
 
@@ -99,6 +128,12 @@ function Home(props) {
     }, [props.navigation, props.route]);
 
     const punchInHandler = async () => {
+
+        if (punchedIn) {
+            Alert.alert('User already punched in');
+            return;
+        }
+
         if (Platform.OS === 'ios') {
             getOneTimeLocation('punch-in');
         } else {
@@ -164,15 +199,20 @@ function Home(props) {
                 'longitude': currentLongitude
             })
         }
-
         let response = await apiCall('employee/punch_in/', options);
-        
+
         setShowLoader(false);
         if (response?.message == 'User punched in successfully') {
             setProgressValue(0.33);
             setCurrentLatitude('...');
             setCurrentLongitude('...');
             props.navigation.navigate('SelfieUpload');
+            // Alert.alert('User Punched in successfully');
+            // setIsStopwatchStart(true);
+            // setProgressValue(1);
+            // setPunchedIn(true);
+            // setPunchType('');
+            // storeData('punchInTime', Date.now());
         }
         else {
             setPunchType('');
@@ -206,16 +246,57 @@ function Home(props) {
             Alert.alert(response?.message);
             setCurrentLatitude('...');
             setCurrentLongitude('...');
-            setResetStopwatch(true);
+            setIsStopwatchStart(false);
             setPunchedIn(false);
             setPunchType('');
+            storeData('punchInTime', 0);
         }
         else {
             setPunchType('');
             Alert.alert(response?.message);
             return;
         }
+    }
 
+    const onBreakHandler = () => {
+
+        console.log('isStopwatchStart', isStopwatchStart);
+        
+        var timeElapsed = 0;
+        var milliSecondsDifference = 0;
+        if (isStopwatchStart == true) {
+            getData('timeElapsed').then((res) => {
+                console.log('TimeElapsed ==> ', res);
+                
+                if (res !== null) {
+                    timeElapsed = res;
+                }
+            })
+
+            getData('punchInTime').then((res) => {
+                console.log('Punch in time ==> ', res);
+                
+                var difference = Date.now() - res;
+                milliSecondsDifference = Math.floor(difference);
+                storeData('timeElapsed', milliSecondsDifference + timeElapsed);
+            })
+
+            setStopWatchStartTime(milliSecondsDifference + timeElapsed);
+        }
+        else {
+            getData('timeElapsed').then((res) => {
+                if (res !== null) {
+                    timeElapsed = res;
+                }
+                storeData('punchInTime', timeElapsed);
+            })
+
+            console.log('TimeElapsed 2 ==> ', timeElapsed);
+
+            setStopWatchStartTime(timeElapsed);
+        }
+
+        setIsStopwatchStart(!isStopwatchStart);
     }
 
     const getOneTimeLocation = (punchType) => {
@@ -254,7 +335,7 @@ function Home(props) {
     }
 
     return (
-        <SafeAreaProvider style={{ flex: 1, backgroundColor: mainColors.white }}>            
+        <SafeAreaProvider style={{ flex: 1, backgroundColor: mainColors.white }}>
             <View style={{ height: insets.top, backgroundColor: mainColors.primaryButtonColor }}>
                 <StatusBar
                     animated={true}
@@ -295,19 +376,16 @@ function Home(props) {
                         }]}>
                             00:00 AM
                         </Text> */}
-                        <Stopwatch
-                            laps
+                        {isStopwatchStart && <Stopwatch
+                            laps={true}
+                            startTime={stopWatchStartTime}
                             start={isStopwatchStart}
-                            // To start
                             reset={resetStopwatch}
                             options={stopWatchStyles}
-                            // To reset
-                            // Options for the styling
                             getTime={(time) => {
-                                // console.log(time);
                                 setTimeElapsed(time)
                             }}
-                        />
+                        />}
                     </View>
                     <Image source={require('./../../images/hand-watch-img.png')} style={{ position: 'absolute', right: 5, top: '25%' }}></Image>
                 </View>
@@ -357,7 +435,7 @@ function Home(props) {
                         <View style={{ padding: 10 }}>
                             <View style={{ flexDirection: 'row', marginVertical: '5%', justifyContent: 'space-between' }}>
                                 <TouchableOpacity activeOpacity={1} onPress={() => punchInHandler()} style={{ width: scale(130), height: verticalScale(130), marginRight: moderateScale(8), borderRadius: 32 }}>
-                                    <LinearGradient colors={['#FEF2E8', '#FEF2E8']} style={{
+                                    <LinearGradient colors={punchedIn ? ['#fabd8b', '#fabd8b'] : ['#FEF2E8', '#FEF2E8']} style={{
                                         width: '100%', height: '100%',
                                         borderRadius: 32, justifyContent: 'center', alignItems: 'center'
                                     }}>
@@ -391,7 +469,7 @@ function Home(props) {
                                         </Text>
                                     </LinearGradient>
                                 </TouchableOpacity>
-                                <TouchableOpacity activeOpacity={1} disabled={timeElapsed == null || timeElapsed == '00:00:00'} onPress={() => setIsStopwatchStart(!isStopwatchStart)} style={{ width: scale(130), height: verticalScale(130), marginLeft: moderateScale(10), borderRadius: 32 }}>
+                                <TouchableOpacity activeOpacity={1} disabled={timeElapsed == null || timeElapsed == '00:00:00'} onPress={() => onBreakHandler()} style={{ width: scale(130), height: verticalScale(130), marginLeft: moderateScale(10), borderRadius: 32 }}>
                                     <LinearGradient colors={['#E3F7F9', '#E3F7F9']} style={{
                                         width: '100%', height: '100%',
                                         borderRadius: 32, justifyContent: 'center', alignItems: 'center'
